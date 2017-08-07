@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">realweavergeolocation</string>
+
+    <!-- Error messages -->
+    <string name="NO_ERROR">Sem erro.</string>
+
+    <!-- Mobile messages -->
+    <string name="M01">N&#227;o foi poss&#237;vel conectar-se ao servidor.</string>
+</resources>
