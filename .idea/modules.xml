@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/SDKRWGeofenceSample.iml" filepath="$PROJECT_DIR$/SDKRWGeofenceSample.iml" />
+      <module fileurl="file://$PROJECT_DIR$/SDKGeofence.iml" filepath="$PROJECT_DIR$/SDKGeofence.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
       <module fileurl="file://$PROJECT_DIR$/mylibrary/mylibrary.iml" filepath="$PROJECT_DIR$/mylibrary/mylibrary.iml" />
       <module fileurl="file://$PROJECT_DIR$/realweavergeolocation/realweavergeolocation.iml" filepath="$PROJECT_DIR$/realweavergeolocation/realweavergeolocation.iml" />

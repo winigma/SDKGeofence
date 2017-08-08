@@ -6,7 +6,6 @@ import android.location.Location;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 
-import br.com.zup.realwavegeolocation.RWGApplication;
 
 /**
  * Created by wisle on 24/07/2017.

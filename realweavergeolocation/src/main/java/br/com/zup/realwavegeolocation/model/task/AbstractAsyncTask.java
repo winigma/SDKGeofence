@@ -4,6 +4,7 @@ import android.os.AsyncTask;
 
 import br.com.zup.realwavegeolocation.RWGApplication;
 
+
 /**
  * Created by wisle on 02/08/2017.
  */
