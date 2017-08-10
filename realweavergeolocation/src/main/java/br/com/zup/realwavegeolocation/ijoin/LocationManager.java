@@ -1,7 +1,6 @@
 package br.com.zup.realwavegeolocation.ijoin;
 
 import android.Manifest;
-import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -23,17 +22,13 @@ import com.google.android.gms.location.GeofencingRequest;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.tasks.OnSuccessListener;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import br.com.zup.realwavegeolocation.connectorcallback.TagTaskConnectorCallback;
-import br.com.zup.realwavegeolocation.connectorcallback.interfaces.ITagConnectorCallback;
 import br.com.zup.realwavegeolocation.ijoin.broadcast.MyResultReceive;
 import br.com.zup.realwavegeolocation.ijoin.interfaces.ITagServiceIntegration;
-import br.com.zup.realwavegeolocation.model.Tag;
 import br.com.zup.realwavegeolocation.model.TagBO;
 import br.com.zup.realwavegeolocation.model.enums.ERWGeoResponses;
 import br.com.zup.realwavegeolocation.service.RealWaveTagTransitionService;
@@ -43,7 +38,7 @@ import br.com.zup.realwavegeolocation.service.RealWaveTagTransitionService;
  */
 
 public class LocationManager implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, IProviderLocationSetting,
-        ICallBackServiceTag, ITagServiceIntegration {
+        ICallBackServiceTag, ITagServiceIntegration, ResultCallback<Status> {
 
     private final String TAG = "LocationManager";
     public final static  String RECEIVER= "receiver";
@@ -52,7 +47,7 @@ public class LocationManager implements GoogleApiClient.ConnectionCallbacks, Goo
     private GoogleApiClient mLocationClient;
     private final LocationListener mLocationListener;
     private LocationRequest mLocationRequest;
-    private Location mLocation;
+    private Location mLastLocation;
     private final Context mContext;
 
     private int mPriorityAccurrancy;
@@ -63,7 +58,7 @@ public class LocationManager implements GoogleApiClient.ConnectionCallbacks, Goo
      */
 
     private static final long GEO_DURATION = 60 * 60 * 1000;
-    private static final float GEOFENCE_RADIUS = 500.0f; // in meters
+    private static final float GEOFENCE_RADIUS = 700.0f; // in meters
 
     private GeofencingClient mGeofencingClient;
 
@@ -77,20 +72,23 @@ public class LocationManager implements GoogleApiClient.ConnectionCallbacks, Goo
     private MyResultReceive myResultReceive;
 
 
-    public LocationManager(final Context context, final LocationListener listener, final int accurancy,final GeofenceCallback mGeofenceCallbackListener) {
+    public LocationManager(final Context context, final LocationListener listener,
+                           final int accurancy,final GeofenceCallback mGeofenceCallbackListener) {
         this.mContext = context;
         this.mLocationListener = listener;
         this.mPriorityAccurrancy = accurancy;
         this.mGeofenceCallbackListener =  mGeofenceCallbackListener;
+        mGeofencingClient = LocationServices.getGeofencingClient(this.mContext);
 
         initialize();
     }
 
     private void initialize() {
         this.mLocationClient = new GoogleApiClient.Builder(this.mContext)
-                .addApi(LocationServices.API).addConnectionCallbacks(this)
+                .addApi(LocationServices.API).
+                 addConnectionCallbacks(this)
                 .build();
-        this.mGeofencingClient = LocationServices.getGeofencingClient(mContext);
+       // this.mGeofencingClient = LocationServices.getGeofencingClient(mContext);
         this.myResultReceive =  new MyResultReceive(null, this.mGeofenceCallbackListener);
     }
 
@@ -133,7 +131,7 @@ public class LocationManager implements GoogleApiClient.ConnectionCallbacks, Goo
                 // for ActivityCompat#requestPermissions for more details.
                 return;
             } else {
-                mLocation = LocationServices.FusedLocationApi
+                mLastLocation = LocationServices.FusedLocationApi
                         .getLastLocation(mLocationClient);
             }
 
@@ -186,7 +184,11 @@ public class LocationManager implements GoogleApiClient.ConnectionCallbacks, Goo
      * @return the Location or null if location configuration is disabled.
      */
     public Location getLocation() {
-        return mLocation;
+        return mLastLocation;
+    }
+
+    public void setmLastLocation(Location mLastLocation) {
+        this.mLastLocation = mLastLocation;
     }
 
     /**
@@ -232,8 +234,8 @@ public class LocationManager implements GoogleApiClient.ConnectionCallbacks, Goo
         Log.d(TAG, "creategeofence");
         return new Geofence.Builder().setRequestId(poi.getName()).
                 setCircularRegion(poi.getLatitude(), poi.getLongitude(), radius).
-                setExpirationDuration(Geofence.NEVER_EXPIRE).setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER
-                | Geofence.GEOFENCE_TRANSITION_EXIT).setLoiteringDelay(20000).
+                setExpirationDuration(60 * 60 * 1000).setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER
+                | Geofence.GEOFENCE_TRANSITION_EXIT | Geofence.GEOFENCE_TRANSITION_DWELL).setLoiteringDelay(2000).
                 build();
 
     }
@@ -243,8 +245,8 @@ public class LocationManager implements GoogleApiClient.ConnectionCallbacks, Goo
         Log.d(TAG, "createGeofenceRequest");
 
         GeofencingRequest.Builder builder = new GeofencingRequest.Builder();
-        builder.setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER | GeofencingRequest.INITIAL_TRIGGER_ENTER);
-        builder.addGeofences(geofences);
+        builder.setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER | GeofencingRequest.INITIAL_TRIGGER_DWELL);
+        builder.addGeofence(geofences.get(0));
 
 
         return builder.build();
@@ -254,33 +256,18 @@ public class LocationManager implements GoogleApiClient.ConnectionCallbacks, Goo
     private void addGeofence(GeofencingRequest request) {
         Log.d(TAG, "addGeofence");
         if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
+
             return;
         }
-       /* mGeofencingClient.addGeofences(request, createGeofencePendingIntent()).addOnSuccessListener((Activity) mContext, new OnSuccessListener<Void>() {
-            @Override
-            public void onSuccess(Void aVoid) {
 
-            }
-        });*/
 
         geoFencePendingIntent =  createGeofencePendingIntent();
-        LocationServices.GeofencingApi.addGeofences(
+        /*LocationServices.GeofencingApi.addGeofences(
                 mLocationClient,
                 request,
                 createGeofencePendingIntent()
-        );/*.setResultCallback(new ResultCallback<Status>() {
-            @Override
-            public void onResult(@NonNull Status status) {
-
-            }
-        });*/
+        ).setResultCallback(this);*/
+        mGeofencingClient.addGeofences(request,createGeofencePendingIntent());
 
     }
 
@@ -345,4 +332,18 @@ public class LocationManager implements GoogleApiClient.ConnectionCallbacks, Goo
         Log.e("Error Conection",response.toString());
 
     }
+
+    @Override
+    public void onResult(@NonNull Status status) {
+        Log.i(TAG, "onResult: " + status);
+        if ( status.isSuccess() ) {
+            Log.i(TAG, "onResultSucess+++++++++++++++++++++++++++++++: " + status);
+
+        } else {
+            Log.e(TAG, "onResultError+++++++++++++++++++++++++++++++: " + status);
+
+        }
+    }
+
+
 }

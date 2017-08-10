@@ -15,6 +15,7 @@
        >
 
 
+        <service android:name="br.com.zup.realwavegeolocation.service.RealWaveTagTransitionService"  android:exported="true"></service>
 
     </application>
 
